@@ -4,6 +4,8 @@ A public-safe, fictional operations dashboard showing a person and an agent work
 
 **Observe → Shield → Prove → Respond**
 
+**Live demo:** https://mission-control-webmcp-safe-preview.vercel.app/
+
 - **Observe:** inspect a fictional fleet and shared task queue.
 - **Shield:** run six deterministic demo security checks, including a simulated Daily Vulnerability Scan and compact scheduled-report preview.
 - **Prove:** execute five repeatable WebMCP safety scenarios against fresh isolated stores.
