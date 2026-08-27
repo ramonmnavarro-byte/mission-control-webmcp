@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test'
+
+test('Observe Shield Prove Respond critical flow', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /mission control/i })).toBeVisible()
+  await expect(page.getByText(/fictional demo/i)).toBeVisible()
+  await page.getByLabel(/task title/i).fill('Stage eclipse telemetry review')
+  await page.getByRole('button', { name: /add demo task/i }).click()
+  await expect(page.getByText('Stage eclipse telemetry review')).toBeVisible()
+  await page.getByRole('button', { name: /run demo scan/i }).click()
+  await expect(page.getByText(/scan #5 complete/i)).toBeVisible()
+  await page.getByRole('button', { name: /preview report/i }).click()
+  await expect(page.getByRole('region', { name: /scheduled report preview/i })).toContainText(/no cron, timer, worker, or background task/i)
+  await page.getByRole('button', { name: /run evaluation suite/i }).click()
+  await expect(page.getByRole('region', { name: /evaluation harness/i }).getByText('5/5')).toBeVisible()
+  await page.getByRole('button', { name: /start simulation/i }).click()
+  await page.getByRole('button', { name: /contain simulation/i }).click()
+  await expect(page.getByText(/fictional signal contained/i)).toBeVisible()
+  await page.getByRole('button', { name: /resolve drill/i }).click()
+  await page.getByRole('button', { name: /^reset$/i }).click()
+  await expect(page.getByText(/incident drill reset to ready/i)).toBeVisible()
+})
+
+test('mobile layout keeps key controls visible without horizontal overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: /shield wall/i })).toBeVisible()
+  await expect(page.getByRole('button', { name: /run demo scan/i })).toBeVisible()
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)
+  expect(overflow).toBe(false)
+})

@@ -1,0 +1,18 @@
+import { z } from 'zod'
+import { createTaskInputSchema, incidentActionSchema, type DemoStore } from './demo-store'
+
+const briefInputSchema=z.object({priority:z.enum(['high','medium','low']).optional()}).strict()
+const emptyInputSchema=z.object({}).strict()
+const incidentToolSchema=incidentActionSchema.omit({source:true}).strict()
+export interface Tool{name:string;description:string;inputSchema:Record<string,unknown>;annotations:Record<string,boolean>;execute(input:unknown):Promise<{content:{type:'text';text:string}[]}>}
+export interface ModelContext{registerTool(tool:Tool,options?:{signal?:AbortSignal}):void}
+const textResult=(value:unknown)=>({content:[{type:'text' as const,text:JSON.stringify(value)}]})
+
+export function buildMissionControlTools(store:DemoStore):Tool[]{return[
+  {name:'get_mission_brief',description:'Read a bounded brief from fictional, memory-only demo data. Optionally filter tasks by priority.',inputSchema:{type:'object',additionalProperties:false,properties:{priority:{type:'string',enum:['high','medium','low']}}},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},async execute(input){const{priority}=briefInputSchema.parse(input),data=store.getSnapshot();return textResult({demo:true,organization:data.organization,fleet:data.fleet.map(({name,status,jobs})=>({name,status,jobs})),tasks:data.tasks.filter((task)=>!priority||task.priority===priority).slice(0,8)})}},
+  {name:'create_demo_task',description:'Create one ephemeral fictional task in this browser session. Never contacts or mutates an external system.',inputSchema:{type:'object',additionalProperties:false,properties:{title:{type:'string',minLength:3,maxLength:80},priority:{type:'string',enum:['high','medium','low']},assignee:{type:'string',enum:['Orion','Vega','Nova']}},required:['title','priority','assignee']},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:false,openWorldHint:false},async execute(input){return textResult({demo:true,task:store.createTask(createTaskInputSchema.parse(input)),persistence:'memory-only'})}},
+  {name:'run_demo_security_scan',description:'Run only the six deterministic Shield Wall checks against this fictional in-memory demo configuration. Accepts no target, URL, host, or path.',inputSchema:{type:'object',additionalProperties:false,properties:{}},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:false,openWorldHint:false},async execute(input){emptyInputSchema.parse(input);const scan=store.runSecurityScan();return textResult({demo:true,type:'demo-security-scan',runNumber:scan.runNumber,score:scan.history[0].score,findings:scan.history[0].findings,persistence:'memory-only'})}},
+  {name:'advance_demo_incident',description:'Advance or reset the fictional Lumen signal drill using a strict reversible action. No real system is contacted.',inputSchema:{type:'object',additionalProperties:false,properties:{action:{type:'string',enum:['start','contain','resolve','reset']}},required:['action']},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:false,openWorldHint:false},async execute(input){const parsed=incidentToolSchema.parse(input),incident=store.advanceIncident({...parsed,source:'webmcp'});return textResult({demo:true,incident:{id:incident.id,status:incident.status,latest:incident.audit[0].event},persistence:'memory-only'})}},
+]}
+
+export function registerMissionControlTools(host:ModelContext,store:DemoStore){const controller=new AbortController();for(const tool of buildMissionControlTools(store))host.registerTool(tool,{signal:controller.signal});return()=>controller.abort()}
